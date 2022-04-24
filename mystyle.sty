@@ -1,0 +1,168 @@
+\ProvidesPackage{mystyle}
+%
+% AUTHOR: Nicolás Otero Martínez - nom05 (at) uvigo.es.
+% COLLABORATORS: -
+% MIT License in the corresponding file.
+% This LaTeX code employs `memoir' class.
+% Some code was used from:
+%
+
+%%  * Packages
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{dcolumn}
+\usepackage{booktabs}
+\usepackage[version=4]{mhchem}
+\usepackage{mathtools}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{paralist}
+\usepackage{graphicx}
+\usepackage{subcaption}
+%\usepackage{mol2chemfig}
+\usepackage{chemfig}         % Load chemfig and define some macros
+\usepackage[
+	backend=biber,
+	style=chem-acs,
+	sorting=none,
+	hyperref
+			]{biblatex}
+% \addbibresource{MyCollection.bib}
+\usepackage{hyperref} % Creates hyperlinks and index in the PDF document, preferably load after biblatex
+\hypersetup{
+	hidelinks
+}
+\usepackage{acronym}
+\usepackage{siunitx}
+\usepackage{physics}
+\usepackage{scrextend}
+	\addtokomafont{labelinglabel}{\sffamily}
+\usepackage{tikz}
+\usepackage{pgfplots} % Required for inserting graphs
+\usepackage{tcolorbox}
+	\tcbuselibrary{listingsutf8}
+	\tcbuselibrary{fitting}
+	\tcbset{listing utf8=latin1}% optional; `latin1' is the default
+
+\usetikzlibrary{automata,spy,shapes.misc,calc,positioning,patterns}
+
+
+%% Units of SIUnitx
+\DeclareSIUnit\molar{\mol\per\liter}
+\DeclareSIUnit\Molar{\textsc{m}}
+\DeclareSIUnit\molal{\mol\per\kilogram}
+\DeclareSIUnit\Molal{m}
+\DeclareSIUnit\torr{Torr}
+\DeclareSIUnit\atm{atm}
+\DeclareSIUnit\fahrenheit{\degree F}
+\DeclareSIUnit\rankine{Ra}
+\DeclareSIUnit\calorie{cal}
+\DeclareSIUnit\atomicunits{au}
+
+%%  * Commands
+
+\renewcommand\chapterautorefname{Section}
+\renewcommand\sectionautorefname{Section}
+\renewcommand\subsectionautorefname{Subsection}
+\renewcommand\pageautorefname{Page}
+\renewcommand\figureautorefname{Figure}
+
+\newcommand\nota[1]{
+	\begin{tcolorbox}[
+			colframe=black,
+			colback=yellow!30!white,
+			colupper=red!30!black,
+			fonttitle=\bfseries,
+			center title]
+		#1
+	\end{tcolorbox}
+}
+
+\newcommand\comando[1]{
+	\begin{tcolorbox}[
+			colback=blue!75!black,
+			colframe=blue!75!black,
+			fontupper=\bfseries,
+			colupper=blue!5!white,
+			size=small
+					]
+		{\footnotesize $\rhd$ #1}
+	\end{tcolorbox}
+}
+
+\newtcblisting{consola}[2][]{
+	colback=blue!5!black,
+	colframe=blue!75!black,
+	fontupper=\bfseries,
+	colupper=blue!5!white,
+	colbacktitle=blue!75!black,
+	size=small,
+	listing only,
+	listing options={
+%		style=tcblatex,
+		basicstyle=\ttfamily\tiny,
+		language=sh,
+		numbers=left,
+		numberstyle=\tiny\color{black}
+	},
+	fonttitle=\bfseries,
+	title={\footnotesize $\rhd$ #2},#1
+}
+
+\newtcblisting{recuadro}[1]{
+	colback=blue!15!black!15!,
+	colframe=blue!75!black,
+	fontupper=\bfseries,
+%	colupper=blue!5!white,
+%	colbacktitle=blue!75!black,
+	size=small,
+	listing only,
+	listing options={
+		basicstyle=\ttfamily\tiny,
+%		tabsize=2,
+%		style=tcblatex,
+		numbers=left,
+		numberstyle=\tiny\color{black}
+	},
+	title={\textbf{#1}}
+}
+
+\newtcolorbox[auto counter]{myexample}[2][]{
+	colback=red!5!white,
+	colframe=red!75!black,
+	size=small,
+	fonttitle=\bfseries,
+	title=Example~\thetcbcounter: #2,#1
+}
+
+\pgfplotsset{compat=newest,every axis/.append style={
+		font=\footnotesize,
+		line width=1pt,
+		tick style={line width=0pt}},
+	every axis legend/.append style={
+		at={(0.5,-0.27)},
+		anchor=south}}
+
+\chapterstyle{hangnum}
+
+\setlength{\beforechapskip}{1pt}
+\setlength{\midchapskip}{10pt}
+\setlength{\afterchapskip}{20pt}
+
+
+% Modification of the `headings' page style
+\makeheadrule{headings}{\textwidth}{\normalrulethickness} % Add line under header
+\makeevenhead{headings}{\thepage}{\leftmark}{\includegraphics[width=2.5cm,clip,trim={7.6cm 3.cm 0 1.2cm}]{figures/logo}} % Center even header
+\makeoddhead{headings}{\includegraphics[width=2.5cm,clip,trim={7.6cm 3.cm 0 1.2cm}]{figures/logo}}{\programa~\versionprog}{\thepage} % Center odd header
+\addtopsmarks{headings}{}{
+	\createmark{chapter}{both}{shownumber}{}{. \space} % Remove the word `Chapter' from the header
+}
+\pagestyle{headings} % Activate page style again for changes to take effect
+
+\setlength{\parskip}{0pt} % Remove rubber lengths between paragraphs
+
+\setsecheadstyle{\large\bfseries\raggedright}
+\setsubsecheadstyle{\normalsize\em\raggedright}
+
+\sloppybottom

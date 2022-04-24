@@ -1,0 +1,777 @@
+\documentclass[a4paper,11pt,openany]{memoir}
+%                                                                                                                                                                 │
+% AUTHOR: Nicolás Otero Martínez - nom05 (at) uvigo.es.                                                                                                           │
+% COLLABORATORS: -                                                                                                                                                │
+% MIT License in the corresponding file.                                                                                                                          │
+% This LaTeX code employs `memoir' class.                                                                                                                         │
+% Some code was used from:                                                                                                                                        │
+%
+\usepackage{mystyle}   %% Includes all packages
+
+\newcommand\versionprog{220331}
+\newcommand\programa{\textsc{Fukui}}
+
+\hypersetup{
+	pdfauthor={Nicol\'{a}s Otero Martínez},
+	pdftitle={\programa~v\versionprog}
+}
+
+
+\addbibresource{biblio.bib}
+
+\title{\programa~\versionprog: A Program to Compute Fukui Indices and Atomic Overlap Matrices}
+\author{Nicol\'{a}s Otero Mart\'{i}nez, Marcos Mandado Alonso, Ricardo A. Mosquera Castro}
+\date{\today}
+
+\begin{document}
+\acrodef{HI}{Hirsfeld-I}
+\acrodef{HF}{Hartree-Fock}
+\acrodef{FOHI}{fractional occupation \mbox{Hirsfeld-I}}
+\acrodef{MO}{molecular orbital}
+\acrodef{2-DI}{2-center delocalization index}
+\acrodef{6-DI}{6-center delocalization index}
+\acrodef{GPA}{Generalized Population Analysis}
+\acrodef{QTAIM}{Quantum Theory of Atoms In Molecules}
+\acrodef{SOS}{sum-over-states}
+\acrodef{BSSE}{basis set superposition error}
+\acrodef{FMR}{fragment of molecular response}
+\acrodefplural{AOM}{atomic overlap matrices}
+\acrodef{AOM}{atomic overlap matrix}
+
+\cleardoublepage \let\cleardoublepage\clearpage
+
+\frontmatter % Front matter begins
+
+\begin{titlingpage}
+
+\begin{center}
+
+\vspace{1cm}
+
+{\Huge\textbf{\programa~v\versionprog}\\[.5cm]
+	{\Large A Program to Compute Fukui Indices and Atomic Overlap Matrices}}
+
+\vspace{1cm}
+
+% Specify custom columns types with fixed width and left and right alignment
+\newcolumntype{x}[1]{%
+>{\raggedleft\hspace{0pt}}p{#1}}%
+\newcolumntype{y}[1]{%
+>{\raggedright\hspace{0pt}}p{#1}}%
+
+\begin{tabular}{x{6.5cm}y{4.5cm}}
+Author: & e-mail: \tabularnewline
+Nicol\'{a}s Otero Mart\'{i}nez & \url{nom05@uvigo.es} \tabularnewline
+Marcos Mandado Alonso & \url{mandado@uvigo.es} \tabularnewline
+Ricardo A. Mosquera Castro & \url{mosquera@uvigo.es} \tabularnewline
+\end{tabular}
+
+\hrule
+
+\vspace{3.5cm}
+
+\begin{center}
+	\begin{tabular}{c@{\hspace{3cm}}c}
+		Nicolás Otero Martínez & Marcos Mandado Alonso
+	\end{tabular}
+\end{center}
+
+\vspace{3.5cm}
+
+\begin{center}
+	Ricardo A. Mosquera Castro
+\end{center}
+
+\vspace{0.5cm}
+
+\today
+
+\vfill
+
+\includegraphics[width=10cm]{figures/logo}
+
+\end{center}
+
+\end{titlingpage}
+
+% The * after \tableofcontents prevents it from getting an entry in the TOC
+\tableofcontents*
+
+% Main matter begins
+\mainmatter
+
+%\begin{OnehalfSpace} % Use to begin double line spacing
+
+\chapter{\programa: scheme and software}
+
+% Fixed width box
+\nota{This document is a short guide to use \programa, a program developed as a multipurpose tool to perform chemical reactivity indices called ``Fukui indices'', $\sigma$/$\pi$ separation of atomic populations (reading a input file with the molecular orbital symmetry) and the calculation of atomic overlap matrices as a previous step to compute the $N$-electron delocalization indices (employed for aromaticity studies, for example) and condensed 2-center Fukui indices, used for studies of reactivity and resonance effects. The program reads points grids from several sources and, therefore, it is independent of the type of real-space atomic electron density partitioning employed.}
+
+\section{Scheme of the program}
+\programa~is a tool designed to perform several tasks in a parallelized and efficient way using a grid of points:
+\begin{itemize}
+	\item Compute the total population from the aforementioned grid.
+	\item Real space molecular partitioning schemes, such as QTAIM\cite{bader1994atoms} and Hirshfeld-based\cite{BondedatomfragmentsHirshfeld1977,CriticalanalysisextensionBAA2007,ExtensionHirshfeldMethodGKB2011} methodology, can be employed for the calculation of condensed Fukui indices using the \ac{FMR} approach \cite{RevisitingcalculationcondensedOMM2007,ChemicalreactivityframeworkOM2012}.
+	\item Real space \ac{AOM} can be computed within the grid domains as a previous step to obtain bond orders and $N$-electron delocalization indices through a grid of points following Mandado's implementation\cite{QTAIMncenterdelocalizationMGM2007,LocalaromaticitystudyMOM2006}.
+	\item $\sigma$/$\pi$ \ac{MO} contributions can be separated from the total population.
+\end{itemize}
+
+\section{Program details}
+\begin{itemize}
+	\item Programming language: Fortran 2008
+	\item Operating systems: Any with Fortran (compilers), CMake and, optionally, OpenMP (for parallelization support).
+	\item List of source files:
+		fukui.f90
+		goon.f90
+		help.f90
+		modules/computation.f90
+		modules/grid.f90
+		modules/main.f90
+		modules/output.f90
+		modules/pi.f90
+		modules/wfn.f90
+			openmp/init\_par.f90
+	\item List of CMake files:
+		CMakeLists.txt
+		modules/CMakeLists.txt
+		openmp/CMakeLists.txt
+	\item List of utilities:
+		bstk\_astk.f90
+		cube2stk.f90
+		fukui.sh
+		mwfn2piorbs.sh
+		som2sg.sh
+\end{itemize}
+
+\section{Units}
+\nota{If not stated otherwise, \programa~ program outputs its results in atomic units (electrons) for populations.}
+
+\section{Structure of the program}
+The structure and steps of the program are summarized in \autoref{fig:flowchart}.
+
+\begin{figure}
+	\begin{center}
+		\includegraphics[width=.8\textwidth]{./figures/flowchart}
+		\caption{Simplified flowchart of the \programa~\versionprog~ program execution. Terminal blocks are represented by a green stadium shape, while the input/output and decision blocks correspond to blue rhomboid and yellow rhombus shapes, respectively. Last, the rectangle is used to stand for process blocks in the program. The acronym of \acf{AOM} and $\rho(\vec{r})$, the electron density, are also employed in this chart.}\label{fig:flowchart}
+	\end{center}
+\end{figure}
+
+\section{Terms of use}
+%\programa~ is a free software only for academic use. For commercial use a license fee is applied.
+\programa~ is free software under MIT license. We refer to the GitHub web page for more details about the license:
+\begin{center}
+	\texttt{\url{https://github.com/nom05/fukui}}\textcolor{red}{PUBLICAR CÓDIGO}
+\end{center}
+
+%\section{Terms of use}
+%\programa~ is a free software only for academic use. For commercial use a license fee is applied.
+
+\chapter{Program installation}
+
+% Fixed width box
+\nota{\textbf{NOTE:} The preferred platform or, more specifically, the platform the developers use is GNU/Linux. MS Windows is an untested alternative. Through WSL or WSL2 the compilation would be equivalent to the following instructions. It is beyond the scope of this manual to explain how to activate these options in MS Windows.}
+
+The program source code will be available in \colorbox{red}{\url{https://github.com/nom05/fukui} **CHECK}. To install the program, follow the instructions:
+\begin{enumerate}
+	\item Clone firstly the repository:
+		\comando{git clone github.com/nom05/fukui **CHECK}
+	\item Enter in the directory:
+		\comando{cd fukui **CHECK}
+	\item Verify your current CMake version\footnote{From Wikipedia: In software development, CMake is cross-platform free and open-source software for build automation, testing, packaging and installation of software by using a compiler-independent method. CMake is not a build system but rather it generates another system's build files. It supports directory hierarchies and applications that depend on multiple libraries. It is used in conjunction with native build environments such as Make, Qt Creator, Ninja, Android Studio, Apple's Xcode, and Microsoft Visual Studio. It has minimal dependencies, requiring only a C++ compiler on its own build system.} is equal or greater than 2.8.12.
+		\begin{consola}{cmake -{}-version}
+cmake version 3.22.3
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+\end{consola}
+	\item Choose the Fortran compiler. By default, GNU Fortran (gfortran) will be employed. To use an alternative, edit the file called ``CMakeLists.txt'', in the parent directory of the source code, with your favorite editor (nano, vi, vim, Visual Studio Code, etc.). Comment (adding the symbol `\#') or uncomment (remove `\#') with the purpose of disabling or enabling, respectively, your personal options:
+		\begin{consola}{vim CMakeLists.txt}
+## >> DEFAULT COMPILER << ## Force compiler you want
+set(CMAKE\_Fortran\_COMPILER gfortran)
+#set(CMAKE\_Fortran\_COMPILER ifort)
+set(CMAKE\_GENERATOR\_FC gfortran)
+#set(CMAKE\_GENERATOR\_FC ifort)
+## Comment the line in which ``gfortran'' is set and uncomment the corresponding lines
+## using ``ifort'':
+## >> DEFAULT COMPILER << \#\# Force compiler you want
+#set(CMAKE\_Fortran\_COMPILER gfortran)
+set(CMAKE\_Fortran\_COMPILER ifort)
+#set(CMAKE\_GENERATOR\_FC gfortran)
+set(CMAKE\_GENERATOR\_FC ifort)
+\end{consola}
+	\item Create a new directory called, for example, ``build'' and enter inside:
+		\comando{mkdir build; cd build}
+	\item Now, create the compilation environment:
+		\begin{consola}{cmake ..}
+-- The C compiler identification is GNU 11.2.0
+-- The CXX compiler identification is GNU 11.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- The Fortran compiler identification is GNU 11.2.0
+-- Detecting Fortran compiler ABI info
+-- Detecting Fortran compiler ABI info - done
+-- Check for working Fortran compiler: /usr/bin/gfortran - skipped
+-- Found OpenMP_C: -fopenmp (found version "4.5") 
+-- Found OpenMP_CXX: -fopenmp (found version "4.5") 
+-- Found OpenMP_Fortran: -fopenmp (found version "4.5") 
+-- Found OpenMP: TRUE (found version "4.5")  
+OPENMP FOUND
+-- Configuring done
+-- Generating done
+-- Build files have been written to: [...]/fukui/src/build
+\end{consola}
+	\item And finally compile the code:
+		\begin{consola}{make}
+Scanning dependencies of target fukui.x
+[  9%] Building Fortran object CMakeFiles/fukui.x.dir/modules/main.f90.o
+/home/nicux/Documentos/research/code/fortran/fukui/src/modules/main.f90:206:45:
+
+198 |       do i = 1,imos
+|                   2                          
+......
+206 |                   write(charintd,'(I7)') moc(i-1)
+|                                             1
+Warning: Array reference at (1) out of bounds (0 < 1) in loop beginning at (2) [-Wdo-subscript]
+[ 18%] Building Fortran object CMakeFiles/fukui.x.dir/modules/grid.f90.o
+[ 27%] Building Fortran object CMakeFiles/fukui.x.dir/modules/wfn.f90.o
+[ 36%] Building Fortran object CMakeFiles/fukui.x.dir/modules/computation.f90.o
+[ 45%] Building Fortran object CMakeFiles/fukui.x.dir/modules/pi.f90.o
+[ 54%] Building Fortran object CMakeFiles/fukui.x.dir/modules/output.f90.o
+[ 63%] Building Fortran object CMakeFiles/fukui.x.dir/fukui.f90.o
+[ 72%] Building Fortran object CMakeFiles/fukui.x.dir/help.f90.o
+[ 81%] Building Fortran object CMakeFiles/fukui.x.dir/goon.f90.o
+[ 90%] Building Fortran object CMakeFiles/fukui.x.dir/openmp/init_par.f90.o
+[100%] Linking Fortran executable fukui.x
+[100%] Built target fukui.x
+\end{consola}
+	\item You will find the executable in the current compilation directory:
+
+\begin{tikzpicture}[spy using outlines={rectangle,very thick,magnification=1.5, connect spies}]
+	\node {
+			\begin{consola}{ls -tr}
+	CMakeCache.txt  openmp  modules  Makefile  cmake_install.cmake  main.mod  grid.mod  wfn.mod  computation.mod  pi.mod  output.mod  fukui.x  CMakeFiles
+\end{consola}
+		};
+	\spy[orange,width=2.cm,height=.54cm] on (2.7,-.37) in node [left] at (6.5,-1.6);
+\end{tikzpicture}
+
+\end{enumerate}
+
+\nota{TIP: To compile faster use several processor threads (increase the number of threads, \#threads) through the option ``-j\#threads''. For example, ``make -j3'' will set three (3) threads.}
+
+\chapter{How to run \programa}
+\programa~ has a special way to specify the options of the calculation. Without arguments, the executable prints a short help:
+\begin{consola}{./fukui.x}
+PROGRAM FUKUI 220301
+
+** WFN file is not included as argument **
+
+Type: ./fukui.x wfnfile stk_file/cube_file [# atom]
+* Extension for stk and wfn files are optional, extension for cube file is mandatory.
+* stk_file can be either a FORTRAN binary file or a ordinary text file.
+They have to include, following this order: x, y, z, Gauss quadrature
+weight and electron density values.
+If the ordinary text format is considered, then the format to read must
+be specified. the label free can be used to use free format specification.
+* [# atom] is optional and enables gauss. func. skipping.
+If wfnfile.skd exists, it reads cut-off1 inside.
+* Sigma/pi separation: create .sg or .som (if both files exist, the first file sought is the .sg file).
+* Only pi MOs: .sg/.som + .pi (command> touch wfnfile.pi).
+* Skip points with gauss. quad. weight < cut-off2: touch wfnfile.skg
+* Skip points with ref. dens < cut-off3: touch wfnfile.skr.
+* cut-off2 and cut-off3 can be changed by editing the values in the
+previously created files.
+* Enable parallelization: Max        ->touch wfnfile.proc
+Set # procs->edit  wfnfile.proc
+* Atomic Overlap Matrix (AOM) calculation: touch wfnfile.aom
+* Change max dim. of array allocation: edit  wfnfile.mxal
+Include in this file (all lines are mandatory):
+o Line 1: Max # atoms.
+o Line 2: Max #    mol. orbs.
+o Line 3: Max # points.
+o Line 4: Max # prim. funcs.
+\end{consola}
+As you can observe in the previous execution output without arguments, the program needs a file containing wave function information (see \autoref{appx:getwfn} and \autoref{appx:convertwfn} in the Appendix for instructions to create it and convert among wave function files, respectively) and another file including the points grid.
+
+\section{File including grid of points}
+\programa~ supports two types of points grid files:
+\begin{itemize}
+	\item Cube files, following the file format used by Gaussian utilities reference (\url{https://gaussian.com/cubegen/}). This grid is based on points set using a step size in the three directions of the  space, forming a cube (strictly speaking, a parallelepiped) containing the molecule. These cube files are built from the following scheme:
+	\begin{labeling}{Line 7 and the NA following}
+		\item[Line 1 and 2] Computational details and a comment line.
+		\item[Line 3] Number of atoms (NA), the grid origin in Cartesian coordinates and the number of values per point. In the case of electron density, the value is equal to \num{1}.
+		\item[Line 4] Number of steps in the slowest running direction and the vector whose modulus corresponds to the distance between two points of this direction.
+		\item[Line 5] Number of steps in the intermediate running direction and the vector whose modulus corresponds to the distance between two points of this direction.
+		\item[Line 6] Number of steps in the fastest running direction and the vector whose modulus corresponds to the distance between two points of this direction.
+		\item[Line 7 and the NA following] Atomic number, charge, and coordinates of the atoms.
+		\item[Line 7+NA+1 until the end] Values of the electron density at each point in the grid. The total number of values is obtained as the product of the number of the steps in the three directions.
+	\end{labeling}
+		\begin{recuadro}{Cube file structure:}
+ tetracene B3LYP/6-31G** Density
+ Electron density from Total SCF Density
+   30   -6.512752  -15.750103   -9.176246    1
+   53    0.248108    0.000000    0.000000
+  128    0.000000    0.248108    0.000000
+   75    0.000000    0.000000    0.248108
+    6    6.000000    0.000000    9.237351    1.351534
+    6    6.000000    0.000000    7.012694    2.663494
+[...]
+    1    1.000000    0.000000  -11.027453   -2.355229
+  1.41965E-18  4.15287E-18  1.16752E-17  3.15458E-17  8.19189E-17  2.04457E-16
+		\end{recuadro}
+	\item A points grid obtained by means of a gaussian quadrature, containing x, y, z, numerical integration weights and electron density values, strictly in this order. The program is able to read:
+	\begin{itemize}
+		\item Fortran binary files, saved in unformatted files. They are the fastest way to read the points set.
+		\item Text files with a Fortran specific format. The format to read must be specified. The label ``free'' can be used to use Fortran free format specification. In contrast, the latter is the slowest way to read a file in Fortran.
+		\begin{recuadro}{\textbf{Example 1:} text files including a set of points with a specific Fortran format:}
+(3(F16.8),2(E18.8))
+      0.00000000      2.62795893      0.00031152    0.12858975E-09   0.11765072E+03
+      0.00000000      2.62795893     -0.00031152    0.12858975E-09   0.11765072E+03
+      0.00000000      2.62827045      0.00000000    0.12858975E-09   0.11765075E+03
+      0.00000000      2.62764741      0.00000000    0.12858974E-09   0.11765069E+03
+      0.00031152      2.62795893      0.00000000    0.12858975E-09   0.11765072E+03
+     -0.00031152      2.62795893      0.00000000    0.12858975E-09   0.11765072E+03
+		\end{recuadro}
+		\begin{recuadro}{\textbf{Example 2:}  text files including a set of points with free Fortran format:}
+Free
+      0.00000000      2.62795893      0.00031152    0.12858975E-09   0.11765072E+03
+      0.00000000      2.62795893     -0.00031152    0.12858975E-09   0.11765072E+03
+      0.00000000      2.62827045      0.00000000    0.12858975E-09   0.11765075E+03
+      0.00000000      2.62764741      0.00000000    0.12858974E-09   0.11765069E+03
+      0.00031152      2.62795893      0.00000000    0.12858975E-09   0.11765072E+03
+     -0.00031152      2.62795893      0.00000000    0.12858975E-09   0.11765072E+03
+		\end{recuadro}
+	\end{itemize}
+\end{itemize}
+
+\section{How to perform a calculation}
+The mandatory files needed for the \programa~ program are the aforementioned wave function and grid files. For example, if the files are called ``wavefunction.wfn'' and ``grid\_file\_name.stk'', respectively, the way to run the calculation is:
+\comando{executable\_path/fukui.x wavefunction.wfn grid\_file\_name.stk}
+
+The ``executable\_path'' is the directory containing the executable, for example ``./'' if you are in the current compilation directory.
+
+The extensions are optional with the exception of the cube grid file.
+
+\section{Output file name}
+In the case the user had the following file names: wavefunction.wfn, grid\_file\_name.stk, \programa~ will use the following output file name: ``wavefunction\_grid\_file\_name.fuk''.
+
+\section{Optional: specifying the corresponding atom where the points grid is centered on}\label{sec:gauss.skip}
+In the case the set of points is centered on an atom, it is recommended to activate the ``primitive gaussian functions skipping''. This option avoids to include primitive functions far from the specified atom. The default distance is \SI{18}{au} (a very safe default, according to our tests) but can be modified creating a file ``file.skd'' employing the wave function file name and replacing the extension by ``skd''. There, a new value can be set. For example:
+\comando{echo 4.000 > wavefunction.skd}
+
+\section{Other options}
+In general, the \programa~ program is employed massively in a large set of atoms. Instead of creating a unique input and performing one parallelized calculation, each grid can be processed in a independent way and, therefore, the user can submit several parallelized calculations in different nodes of a high-performance computing cluster, obtaining the results faster. In this way, to facilitate the common options for the different files, the program reads or detects the existence of files to activate its options.
+
+\subsection{Increasing the maximum default employed resources}\label{subsec:resources}
+In the opinion of the developers, it is recommended to define consciously the maximum array dimensions instead of allocating the necessary memory without human control. The user must know if the available computational resources are enough in the case of (very) large systems instead of observing how the system kernel stops the program execution or the computer crashes. For this reason, the \programa~ program includes these default cut-offs modifiable through a configuration file:
+\begin{center}
+	\begin{tabular}{rrrr}
+			\toprule
+				{\# atoms}	&	{\# MOs}	&	{\# points}	&	{\# primitives}	\\
+				50			&	250		&	1000000		&	1000			\\
+			\bottomrule
+		\end{tabular}
+\end{center}
+
+To increase these modest cut-offs (\SI{50}{atoms} are not a lot), the user will create a file including the following lines:
+Line 1: Max number of atoms.
+Line 2: Max number of molecular orbitals.
+Line 3: Max number of points.
+Line 4: Max number of primitive functions.
+
+\subsection{Enabling parallelization}
+\programa~ was developed with OpenMP parallelization (a calculation cannot be shared with other machines). To activate the full parallelization, employing all the threads of the computer, we only need to create an empty file with the wave function file name and replacing the current extension by the text ``proc'':
+\comando{touch wavefunction.proc}
+In the case a specific number of threads is required, the user can set it in the aforementioned file:
+\comando{echo 8 > wavefunction.proc}
+
+\subsection{Modifying the distance in the primitive gaussian functions skipping}
+See \autoref{sec:gauss.skip}.
+
+\subsection{Skipping points with negligible Gauss quadrature weights}
+If the grid file was not processed previously removing negligible Gauss quadrature weights, the user can set the option to skip them. Typing the wave function file name and replacing the extension by ``skg'', this option will be enabled:
+\comando{touch grid\_file\_name.skg}
+The default value is \num{1.0E-10}, a very reasonable cut-off according to our tests, but it is modifiable adding a new value in the file:
+\comando{echo 1.e-9 > grid\_file\_name.skg}
+The program will print on screen and in the output file the number of points skipped and  the total electron density with and without these negligible points.
+
+\subsection{Skipping points with negligible reference electron densities}
+If reference electron densities of the grid file were not processed previously, the user could be interested in skipping them. Typing the wave function file name and replacing the extension by ``skr'', this option will be set:
+\comando{touch grid\_file\_name.skr}
+The default value is \num{5.0E-9}, a very reasonable cut-off according to our tests, but it is modifiable adding a new value in the file:
+\comando{echo 1.e-9 > grid\_file\_name.skr}
+
+\subsection{Setting $\sigma$/$\pi$ separation or only including $\pi$ spin orbitals in the calculation}
+For a lot of years in our research group, we have used a file that includes the identification of the $\sigma$/$\pi$ symmetry of the spin orbitals obtained by a program we called ``simon.x'', and the outputs use the ``.som'' extension. It includes some text including the identification and it is not the easiest way to save a list of $\pi$ spin orbitals for an user from out of our group. For this reason, \programa~ is also compatible with a more simplified format:
+\begin{tcolorbox}[
+	colback=blue!5!black!5!,
+	colframe=blue!75!black,
+	fontupper=\bfseries,
+	colupper=blue!5!black,
+	colbacktitle=blue!75!black,
+	size=small,
+	title={Structure and format of a .sg file}
+				]
+					\#MO \#piMO \#sigmaMO \#no\_identifiedMO\\
+					$\pi$ spin orbitals specification\\
+					$\sigma$ spin orbitals specification\\
+					Specification of unidentified spin orbitals\\
+%	\tcblower
+\end{tcolorbox}
+
+Here is an example of the tetracene:
+	\begin{consola}{cat tetracene.sg}
+60 9 51 0
+46 48 51 55 56 57 58 59 60
+1 2 3 [...] 42 43 44 45 47 49 50 52 53 54
+	\end{consola}
+Therefore, the tetracene has 60 \acp{MO}, 9 of which have $\pi$ symmetry, and 51 are $\sigma$ ones. The contents of the previous example can be saved in a file with the wave function file name and ``.sg'' extension.
+
+When the user needs to obtain populations or \acp{AOM} defined by $\pi$ \acp{MO} only, we can create an empty file with the extension ``.pi'' and the wave function file name:
+\comando{touch wfn\_file\_name.pi}
+
+The calculation will be notably faster in addition.
+
+\subsection{Activating the calculation of \acfp{AOM}}
+The \acfp{AOM} are needed as a previous step to calculate bond orders, exchange-correlation Fukui functions and/or $N$-delocalization indices. This program allows computing it for any region of the molecular space and/or atomic partitioning while a points grid is provided.
+
+Similarly to other options, the user will create an empty file to activate this computation using the wave function file name and the ``.aom'' extension.
+\comando{touch wfn\_file\_name.aom}
+
+\chapter{Output of a correct calculation}\label{chap:output}
+In this section we will discuss the program output on screen (\autoref{sec:onscreen}) and the differences with the saved file (\autoref{sec:file}).
+\section{Output of a correct calculation on screen}\label{sec:onscreen}
+The structure of the output on screen will be explained below. We will use all the options enabled to obtain the population, $\sigma$/$\pi$ separation and the atomic overlap matrices of a .stk file for the optimized tetracene molecule obtained at B3LYP/6-31G** level. The first text we will observe is the version, in this case 220301. After that, the wave function and grid files we are using, that is, ``tetracene.wfn'' and ``tetracene\_C001.stk'', respectively. To enable the parallelization, a .proc file is needed. If you will not use the full available computer threads, specify the number in the file. Next, we will see simple information about the parallelization and a ``Hello'' message coming from each thread. The command we use is:
+\begin{consola}{./fukui.x tetracene.wfn tetracene\_C001.stk 1 (part 1 of 6)}
+PROGRAM FUKUI 220301
+
+
+>> Wave function file found: tetracene.wfn
+>> Grid file using .stk format: tetracene_C001.stk
+>> tetracene.proc was found. Parallelization enabled!!
+
+**************** THREAD INFORMATION ******************
+>> Job running using OpenMP.
+>> The number of processors is .....   8
+>> The number of threads is ........   8
+Hello from process       0
+Hello from process       7
+Hello from process       5
+Hello from process       2
+Hello from process       3
+Hello from process       4
+Hello from process       1
+Hello from process       6
+>> Elapsed wall clock time ........ 0.1845E-02
+
+******************************************************
+* # threads to be used .................... 8
+\end{consola}
+Next, the default maximum resources will be printed. If you need to change them, create the .mxal file following the instruction in \autoref{subsec:resources}.
+\begin{consola}{./fukui.x tetracene.wfn tetracene\_C001.stk 1 (part 2 of 6)}
+>> Using default max array allocations:
+natomx     nommx      npmx    nprimx
+50       250   1000000      1000
+\end{consola}
+The program detects a .sg file. It will read the orbital symmetry specification. Due to the fact we add the third argument to specify the atom in which the grid is centered on, \programa~ will skip gaussian functions far from this atom (with distance greater than \SI{18.0}{au}). Next, we have created the .skg and .skr files and, therefore, the program will check the Gauss quadrature weight functions and density values lower than the cut-off printed. In addition, we set the calculation of the \ac{AOM} creating the ``tetracene.aom'' file.
+
+\begin{consola}{./fukui.x tetracene.wfn tetracene\_C001.stk 1 (part 3 of 6)}
+>> .sg file detected. Sigma/Pi separation will be performed by using tetracene.sg
+>> Atom 1 was specified as 3rd argument. Skipping gaussian functions.
+* Distance in AU from this nucleus ........ 18.000
+>> .skg file detected (tetracene.skg). Skipping points with low weight( 1.000E-10=cut-off)
+>> .skr file detected (tetracene.skr). Skipping points with negligible ref. dens.( 5.000E-09=cut-off)
+>> .aom file detected (tetracene.aom). Atomic overlap matrix will be calculated
+\end{consola}
+The program will detect if the .stk file uses a Fortran unformatted file. Next, it will read both wave function and grid files, verifying all the components are correct and printing how many points will be skipped with our current settings (defined in the .skg and .skr files or using the default cut-off values). The following step, if a .sg or .som file is available, is to identify the $\pi$ \acp{MO}. Before the real calculation starts, the program will print the percentage of gaussian functions considered. This option is very interesting to reduce drastically the dependency with the molecule size.
+\begin{consola}{./fukui.x tetracene.wfn tetracene\_C001.stk 1 (part 4 of 6)}
+>> Opening grid file: tetracene_C001.stk
+* unformatted grid file detected after 23 iterations
+
+[TT] Settings prepared in ....................... 0.00 seconds
+
+>> Reading wave function file:
+* 60 MOs, 588 gaussian functions, 30 atoms.
+* Coordinates and nuclear charges ......... OK
+* Primitive centers ....................... OK
+* Primitive types ......................... OK
+* Primitive exponents ..................... OK
+* MO coefficients ......................... OK
+
+[TT] Wave function read in ...................... 0.02 seconds
+
+>> Reading grid file with a set of points:
+* 82466 points (total)
+* Binary stk file
+* 29154 of 82466 points were considered ->  64.65% skipped
+
+[TT] Grid file read in .......................... 0.03 seconds
+
+>> Opening sigma/pi separation file:
+* PI orbitals read ........................ 46,48,51,55-60 PI(9)
+>> Preparing calculation:
+* Percentage of gaussian functions used ... 88.10%
+
+[TT] Intermediate steps in ...................... 0.00 seconds
+\end{consola}
+We will see how the program splits the grid points among the threads of the computer we are requested:
+\begin{consola}{./fukui.x tetracene.wfn tetracene\_C001.stk 1 (part 5 of 6)}
+>> Computing grid points:
+* CPU 2: from 10933 to 14577 of 29154
+* CPU 0: from 1 to 3644 of 29154
+* CPU 5: from 7289 to 10932 of 29154
+* CPU 1: from 14578 to 18221 of 29154
+* CPU 6: from 3645 to 7288 of 29154
+* CPU 3: from 25510 to 29154 of 29154
+* CPU 7: from 21866 to 25509 of 29154
+* CPU 4: from 18222 to 21865 of 29154
+
+[TT] Grid points computed in .................... 0.40 seconds
+\end{consola}
+The only results the program prints on screen are the total populations, removing the excessive data from the \ac{MO} populations and the \acp{AOM}.
+\begin{consola}{./fukui.x tetracene.wfn tetracene\_C001.stk 1 (part 6 of 6)}
+RESULTS OF THE INTEGRATION
+POP =         6.08561974959715D+00 au
+REF POP =     6.08562096123212D+00 au
+FUKUI = -0.000 au
+
+Considering SKIPPING:
+REF POP =     6.08562062048363D+00 au
+DIF REF POP = 3.407D-07 au
+FUKUI = -0.000 au
+
+SIGMA/PI CONTRIBUTIONS:     9 molecular orbitals with PI symmetry
+SIGMA   5.14519     PI   0.94043
+
+[TT] TOTAL ELAPSED TIME ......................... 0.46 seconds
+PERFORMANCE ................................ 89.84%
+\end{consola}
+Each value represents:
+\begin{labeling}{DIF REF POP}
+	\item[POP] is the total population computed by the program from the wave function file.
+	\item[REF POP] is the population from the .stk file (not computed using the wave function file).
+	\item[FUKUI] corresponds to the difference between REF POP and POP. Depending on the kind of calculation we are performing could be the Fukui index.
+	\item[REF POP] considering SKIPPING: this value represents the overall sum from the densities in the .stk file skipping points with negligible Gauss quadrature weights and electron density values.
+	\item[DIF REF POP] is the subtraction between both REF POP values, with and without skipping. As you can observe, the condensed populations are affected in the 7\textsuperscript{th} decimal position. Therefore, our settings are a very good approach.
+	\item[FUKUI] considering SKIPPING is defined identically as the another FUKUI value but including only the smaller grid of points.
+\end{labeling}
+
+Finally, the results of the $\sigma$/$\pi$ separation, the time spent on the execution and the performance are printed.
+
+\section{File output of a correct calculation}\label{sec:file}
+Part of the information on screen, discussed in \autoref{sec:onscreen}, is also written in a file called following the scheme ``wavefunction\_grid\_file.fuk''. We will discuss the new parts with respect to the output on screen (\autoref{sec:onscreen}). Most of the additions are after printing the populations:
+\begin{consola}{cat wavefunction\_grid\_file.fuk (part 1 of 2)}
+    ORBITAL CONTRIBUTIONS:
+     N( 1) =     0.000000 au
+     N( 2) =     0.000000 au
+     N( 3) =     0.000035 au
+     N( 4) =     0.000035 au
+     N( 5) =     0.000036 au
+     N( 6) =     0.000036 au
+     N( 7) =     0.424937 au
+     N( 8) =     0.424963 au
+     N( 9) =     0.337749 au
+     N(10) =     0.337798 au
+
+[...]
+
+     N(57) =     0.065112 au
+     N(58) =     0.140636 au
+     N(59) =     0.101862 au
+     N(60) =     0.081479 au
+\end{consola}
+As you can see, \programa~ prints the orbital contributions for the total populations. Next, if the .sg or .som file is available, the $\sigma$/$\pi$ separation and, finally, the \ac{AOM} using a 8-column format of real values in scientific notation:
+\begin{consola}{cat wavefunction\_grid\_file.fuk (part 2 of 2)}
+          The Atomic Overlap Matrix
+
+
+
+   0.525717804208E-08
+   0.735609271729E-08  0.176756945118E-07
+[...]
+\end{consola}
+And finally the elapsed time and performance.
+
+\chapter{Utilities}
+Some small programs or utilities have been included. They are independent from the main program, and some of them (with .f90 extension) are compiled as the usual way (compiler source\_code.f90 -o executable\_name.x).
+
+\section{bstk\_astk.f90}
+This small program transforms Fortran formatted .stk files (ASCII text) into unformatted ones (binary data) and vice versa. The program needs the reference .stk file (only include the file name without extension) and the type of file we are using. If no arguments, the program will ask for them.
+
+\section{cube2stk.f90}
+This utility transforms a cube file into an unformatted .stk file. It includes a short help and its use is ``cube2stk.x cube\_file atom\_number''. The last argument is optional.
+
+\section{fukui.sh}
+This BASH script is useful to systematize the execution of a set of .stk files using the following file name scheme: ``stkfilename\_X001.stk'', being ``stkfilename'' the root file name of the .stk file, ``X'' the element symbol and ``001'' the corresponding atom number in the molecule. The script will take all the file names and arguments automatically. For example, ``./fukui.sh tetracene\_C001.stk'' will call the \programa~ program using the wave function called ``tetracene.wfn'', and it will include the third argument ``1'' to enable the primitive skipping. The program will also create the .mxal with the resources needed.
+
+\section{mwfn2piorbs.sh}
+This BASH script will obtain the .sg file to carry out the $\sigma$/$\pi$ separation using the program called Multiwfn. Edit the script to comply with the corresponding executable paths.
+
+\section{som2sg.sh}
+This BASH script is for internal use. It transforms .som into .sg files to perform the $\sigma$/$\pi$ separation.
+
+\chapter{Examples}
+
+\chapter{GNU/Linux benchmarks}
+
+\chapter{How to cite \textsc{\programa~\versionprog}}
+\begin{itemize}
+	\item N. Otero, M. Mandado and R. Mosquera, \programa~\versionprog (2022), Universidade de Vigo.
+\end{itemize}
+
+%\backmatter % Back matter begins
+
+\printbibliography
+
+\begin{appendices} 
+\chapter{Appendices}
+\section{Obtaining PROAIMS wave function file}\label{appx:getwfn}
+
+We will see how to obtain a PROAIMS wave function file with an example for the Gaussian suite of programs. More concretely, we have considered the benzene molecule:
+	\begin{consola}{cat C6H6.gjf}
+%nproc=4
+%mem=1gb
+%chk=C6H6.chk
+# b3lyp 6-31g(d,p) 6d integral=ultrafinegrid
+out=wfn
+
+Title Card Required
+
+0 1
+C                  0.00000000    1.39499067    0.00000000
+C                 -1.20809735    0.69749533    0.00000000
+C                 -1.20809735   -0.69749533    0.00000000
+C                  0.00000000   -1.39499067    0.00000000
+C                  1.20809735   -0.69749533    0.00000000
+C                  1.20809735    0.69749533    0.00000000
+H                  0.00000000    2.49460097    0.00000000
+H                 -2.16038781    1.24730049    0.00000000
+H                 -2.16038781   -1.24730049    0.00000000
+H                  0.00000000   -2.49460097    0.00000000
+H                  2.16038781   -1.24730049    0.00000000
+H                  2.16038781    1.24730049    0.00000000
+
+C6H6.wfn
+	\end{consola}
+
+In order to print a .wfn file, the label \emph{out=wfn} must be included. There exist equivalent forms of this label, such as \emph{output=wfn}, \emph{out=psi} and \emph{output=psi}.
+
+\section{Converting from another file format to PROAIMS wave function}\label{appx:convertwfn}
+One of the most updated software with an active development to convert among formats is the Multiwfn program (\url{http://sobereva.com/multiwfn/}). In the version 3.7 the steps to obtain the .wfn file are shown below:
+\begin{consola}{multiwfn C6H6.fchk}
+Multiwfn -- A Multifunctional Wavefunction Analyzer
+Version 3.7, release date: 2020-Aug-14
+Project leader: Tian Lu (Beijing Kein Research Center for Natural Sciences)
+Below paper ***MUST BE CITED*** if Multiwfn is utilized in your work:
+Tian Lu, Feiwu Chen, J. Comput. Chem., 33, 580-592 (2012)
+[...]
+ Total/Alpha/Beta electrons:     42.0000     21.0000     21.0000
+Net charge:     0.00000      Expected multiplicity:    1
+Atoms:     12,  Basis functions:    120,  GTFs:    210
+Total energy:    -232.113832873650 Hartree,   Virial ratio:  2.00945783
+This is a restricted single-determinant wavefunction
+Orbitals from 1 to    21 are occupied
+Title line of this file: Title Card Required
+
+Loaded C6H6.fchk successfully!
+Formula: H6 C6 
+Molecule weight:        78.11206
+Point group: D6h
+
+"q": Exit program gracefully          "r": Load a new file
+************ Main function menu ************
+0 Show molecular structure and view orbitals
+1 Output all properties at a point
+2 Topology analysis
+3 Output and plot specific property in a line
+4 Output and plot specific property in a plane
+5 Output and plot specific property within a spatial region (calc. grid data)
+6 Check & modify wavefunction
+7 Population analysis and atomic charges
+8 Orbital composition analysis
+9 Bond order analysis
+10 Plot total DOS, partial DOS, OPDOS, local DOS and photoelectron spectrum
+11 Plot IR/Raman/UV-Vis/ECD/VCD/ROA/NMR spectrum
+12 Quantitative analysis of molecular surface
+13 Process grid data (No grid data is presented currently)
+14 Adaptive natural density partitioning (AdNDP) analysis
+15 Fuzzy atomic space analysis
+16 Charge decomposition analysis (CDA) and plot orbital interaction diagram
+17 Basin analysis                    18 Electron excitation analysis
+19 Orbital localization analysis     20 Visual study of weak interaction
+21 Energy decomposition analysis
+100 Other functions (Part 1)         200 Other functions (Part 2)
+300 Other functions (Part 3)
+\end{consola}
+
+\begin{consola}[	listing options={
+		basicstyle=\ttfamily\tiny,
+%		language=sh,
+		numbers=left,
+		numberstyle=\tiny\color{black}
+	}]{Type ``100'' (without inverted commas) and the program will print a text similar to this:}
+              ============ Other functions (Part 1) ============ 
+0 Return
+1 Draw scatter graph between two functions and generate their cube files
+2 Export various files (mwfn/pdb/xyz/wfn/wfx/molden/fch/47/mkl...) or generate input file of quantum chemistry programs
+3 Calculate molecular van der Waals Volume
+4 Integrate a function in whole space
+5 Show overlap integral between alpha and beta orbitals
+6 Monitor SCF convergence process of Gaussian
+8 Generate Gaussian input file with initial guess from fragment wavefunctions
+9 Evaluate interatomic connectivity and atomic coordination number
+11 Calculate overlap and centroid distance between two orbitals
+12 Perform biorthogonalization between alpha and beta orbitals
+13 Calculate HOMA and Bird aromaticity index
+14 Calculate LOLIPOP (LOL Integrated Pi Over Plane)
+15 Calculate intermolecular orbital overlap
+16 Calculate various quantities in conceptual density functional theory (CDFT)
+18 Yoshizawa's electron transport route analysis
+19 Generate promolecular .wfn file from fragment wavefunctions
+20 Calculate Hellmann-Feynman forces
+21 Calculate properties based on geometry information for specific atoms
+22 Detect pi orbitals, set occupation numbers and calculate pi composition
+23 Fit function distribution to atomic value
+24 Obtain NICS_ZZ value for non-planar or tilted system
+\end{consola}
+\begin{consola}{Type ``2'' (without inverted commas) and the program will print a text similar to this:}
+0 Return
+Export system to various formats of files:
+1 Output current structure to .pdb file
+2 Output current structure to .xyz file
+3 Output current structure and atomic charges to .chg file
+4 Output current wavefunction as .wfx file
+5 Output current wavefunction as .wfn file
+6 Output current wavefunction as Molden input file (.molden)
+7 Output current wavefunction as .fch file
+8 Output current wavefunction as .47 file
+9 Output current wavefunction as old Molekel input file (.mkl)
+31 Output current structure to .cml file
+32 Output current wavefunction as .mwfn file
+Generate input file of quantum chemistry codes:
+10 Gaussian
+11 GAMESS-US
+12 ORCA               13 NWChem
+14 MOPAC              15 PSI4
+16 MRCC               17 CFOUR
+18 Molpro             19 Dalton
+20 Molcas             21 Q-Chem
+\end{consola}
+\begin{consola}{Type ``5'' (without inverted commas) and the program will print a text similar to this:}
+Input path for exporting file, e.g. C:\ltwd.wfn
+\end{consola}
+\comando{Type the file name: C6H6.wfn}
+\comando{Exit following the menu codes.}
+You will find the PROAIMS wave function file called ``C6H6.wfn'' in the current directory together with the reference file.
+
+Another way to convert from .fchk to .wfn format is using the program \textsc{AIMAll}.
+
+\end{appendices}
+
+\end{document}
