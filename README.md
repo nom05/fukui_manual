@@ -16,7 +16,7 @@ After the successful compilation go back to the main directory and compile the c
 ```
 pdflatex manual-fukui.tex
 pdflatex manual-fukui.tex
-biber manual-fukui-220402-memoir
+biber manual-fukui
 pdflatex manual-fukui.tex
 pdflatex manual-fukui.tex
 ```
